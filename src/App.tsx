@@ -277,32 +277,47 @@ export default function App() {
       header: true,
       skipEmptyLines: 'greedy',
       complete: (results) => {
+        // Helper to find column value by loose name matching
+        const getValue = (row: any, keyPattern: string) => {
+          const keys = Object.keys(row);
+          const foundKey = keys.find(k => k.toLowerCase().replace(/\s+/g, '').includes(keyPattern.toLowerCase().replace(/\s+/g, '')));
+          return foundKey ? row[foundKey] : undefined;
+        };
+
         const parsedProducts: Product[] = results.data
-          .filter((row: any) => row['tên sản phẩm'] && row['tên sản phẩm'].trim() !== '')
+          .filter((row: any) => {
+            const name = getValue(row, 'tên sản phẩm');
+            return name && name.trim() !== '';
+          })
           .map((row: any, index: number) => {
-            const originalPriceStr = row['giá gốc'] || '0';
-            const discountedPriceStr = row['giá ưu đãi'] || '';
+            const originalPriceStr = String(getValue(row, 'giá gốc') || '0');
+            const discountedPriceStr = String(getValue(row, 'giá ưu đãi') || '');
             const hasDiscount = discountedPriceStr !== '' && discountedPriceStr !== originalPriceStr;
             
             // Extract number from string like "rm36" or "100.000"
             const parsePrice = (str: string) => {
               if (!str) return 0;
-              // Remove currency prefix like rm, ₫, $ etc and separators
               const cleaned = str.replace(/[^\d.]/g, '');
               return parseFloat(cleaned) || 0;
             };
 
-            const rawPlatform = row['nền tảng (platform)'] || 'Shopee';
-            // Capitalize first letter (e.g. shein -> Shein)
-            const platform = (rawPlatform.charAt(0).toUpperCase() + rawPlatform.slice(1)) as Platform;
+            const rawPlatform = (getValue(row, 'nền tảng') || getValue(row, 'platform') || 'Shopee').trim();
+            // Normalize platform name to match type Platform
+            let platform: Platform = "Shopee";
+            const lowerP = rawPlatform.toLowerCase();
+            if (lowerP.includes('shopee')) platform = "Shopee";
+            else if (lowerP.includes('shein')) platform = "Shein";
+            else if (lowerP.includes('tiktok')) platform = "TikTok";
+            else if (lowerP.includes('lazada')) platform = "Lazada";
+            else if (lowerP.includes('amazon')) platform = "Amazon";
 
             return {
               id: `sheet-${index}`,
-              name: row['tên sản phẩm'] || 'Product Name',
+              name: getValue(row, 'tên sản phẩm') || 'Product Name',
               platform,
-              category: row['hangj mục (category )'] || 'General',
-              affiliateLink: row['Affiliate link'] || '#',
-              image: row['Ảnh sản phẩm'] || 'https://via.placeholder.com/400',
+              category: (getValue(row, 'hạng mục') || getValue(row, 'category') || 'General').trim(),
+              affiliateLink: getValue(row, 'link') || '#',
+              image: getValue(row, 'ảnh') || getValue(row, 'image') || 'https://via.placeholder.com/400',
               originalPrice: parsePrice(originalPriceStr),
               discountedPrice: parsePrice(hasDiscount ? discountedPriceStr : originalPriceStr),
               priceString: originalPriceStr,
