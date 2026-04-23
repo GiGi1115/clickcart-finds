@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { PRODUCTS, PLATFORMS, Product, Review, Platform } from './constants';
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRibaK4uT12Aj_VFwKVY2_PP4ASd6p7CYxF8r2SfVZJFMHR_-RzfFv1jbafw9-5PQTID7xlfvWyhvqS/pub?gid=809714474&single=true&output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRibaK4uT12Aj_VFwKVY2_PP4ASd6p7CYxF8r2SfVZJFMHR_-RzfFv1jbafw9-5PQTID7xlfvWyhvqS/pub?output=csv&gid=0";
 
 interface ProductCardProps {
   product: Product;
@@ -272,66 +272,104 @@ export default function App() {
 
   const fetchProducts = () => {
     setIsLoading(true);
+    console.log("Fetching products from:", SHEET_URL);
+    
     Papa.parse(SHEET_URL, {
       download: true,
       header: true,
       skipEmptyLines: 'greedy',
       complete: (results) => {
-        // Helper to find column value by loose name matching
-        const getValue = (row: any, keyPattern: string) => {
+        console.log("Raw CSV results:", results);
+        
+        const getValue = (row: any, keyPattern: string, index?: number) => {
+          if (!row || typeof row !== 'object') return undefined;
+          
           const keys = Object.keys(row);
-          const foundKey = keys.find(k => k.toLowerCase().replace(/\s+/g, '').includes(keyPattern.toLowerCase().replace(/\s+/g, '')));
-          return foundKey ? row[foundKey] : undefined;
+          // 1. Try exact match
+          if (row[keyPattern] !== undefined) return row[keyPattern];
+          
+          // 2. Try normalized search in keys
+          const normalizedPattern = keyPattern.toLowerCase().replace(/\s+/g, '');
+          const foundKey = keys.find(k => {
+            const normalizedK = k.split('(')[0].toLowerCase().replace(/\s+/g, '').trim();
+            return normalizedK.includes(normalizedPattern) || normalizedPattern.includes(normalizedK);
+          });
+          
+          if (foundKey) return row[foundKey];
+          
+          // 3. Fallback to index if available (for rows without headers or failed header detect)
+          if (index !== undefined && results.meta.fields === undefined) {
+             const rowValues = Object.values(row);
+             return rowValues[index];
+          }
+          
+          return undefined;
         };
 
-        const parsedProducts: Product[] = results.data
-          .filter((row: any) => {
-            const name = getValue(row, 'tên sản phẩm');
-            return name && name.trim() !== '';
-          })
-          .map((row: any, index: number) => {
-            const originalPriceStr = String(getValue(row, 'giá gốc') || '0');
-            const discountedPriceStr = String(getValue(row, 'giá ưu đãi') || '');
+        let data = results.data;
+        
+        // If data seems invalid (e.g., PapaParse failed to get headers correctly)
+        // results.meta.fields empty means it might be an array of arrays or misinterpreted
+        const parsedProducts: Product[] = data
+          .map((row: any, idx: number) => {
+            // Helper to get string version safely
+            const s = (val: any) => val === undefined || val === null ? "" : String(val).trim();
+            
+            const name = s(getValue(row, 'tên sản phẩm', 0) || getValue(row, 'name', 0));
+            if (!name || name === 'Product Name' || name === '0') return null;
+
+            const originalPriceStr = s(getValue(row, 'giá gốc', 5) || '0');
+            const discountedPriceStr = s(getValue(row, 'giá ưu đãi', 6) || '');
             const hasDiscount = discountedPriceStr !== '' && discountedPriceStr !== originalPriceStr;
             
-            // Extract number from string like "rm36" or "100.000"
             const parsePrice = (str: string) => {
               if (!str) return 0;
               const cleaned = str.replace(/[^\d.]/g, '');
               return parseFloat(cleaned) || 0;
             };
 
-            const rawPlatform = (getValue(row, 'nền tảng') || getValue(row, 'platform') || 'Shopee').trim();
-            // Normalize platform name to match type Platform
+            const rawPlatform = s(getValue(row, 'nền tảng', 1) || getValue(row, 'platform', 1) || 'Shopee');
             let platform: Platform = "Shopee";
-            const lowerP = rawPlatform.toLowerCase();
-            if (lowerP.includes('shopee')) platform = "Shopee";
-            else if (lowerP.includes('shein')) platform = "Shein";
-            else if (lowerP.includes('tiktok')) platform = "TikTok";
-            else if (lowerP.includes('lazada')) platform = "Lazada";
-            else if (lowerP.includes('amazon')) platform = "Amazon";
+            const lp = rawPlatform.toLowerCase();
+            if (lp.includes('shopee')) platform = "Shopee";
+            else if (lp.includes('shein')) platform = "Shein";
+            else if (lp.includes('tiktok')) platform = "TikTok";
+            else if (lp.includes('lazada')) platform = "Lazada";
+            else if (lp.includes('amazon')) platform = "Amazon";
+
+            const category = s(getValue(row, 'hạng mục', 2) || getValue(row, 'category', 2) || 'General');
+            const link = s(getValue(row, 'link', 3) || getValue(row, 'Affiliate', 3) || '#');
+            const image = s(getValue(row, 'ảnh', 4) || getValue(row, 'image', 4) || 'https://via.placeholder.com/400');
 
             return {
-              id: `sheet-${index}`,
-              name: getValue(row, 'tên sản phẩm') || 'Product Name',
+              id: `sheet-${idx}`,
+              name,
               platform,
-              category: (getValue(row, 'hạng mục') || getValue(row, 'category') || 'General').trim(),
-              affiliateLink: getValue(row, 'link') || '#',
-              image: getValue(row, 'ảnh') || getValue(row, 'image') || 'https://via.placeholder.com/400',
+              category: category || 'General',
+              affiliateLink: link || '#',
+              image: image || 'https://via.placeholder.com/400',
               originalPrice: parsePrice(originalPriceStr),
               discountedPrice: parsePrice(hasDiscount ? discountedPriceStr : originalPriceStr),
               priceString: originalPriceStr,
               discountPriceString: hasDiscount ? discountedPriceStr : '',
-              label: index % 3 === 0 ? "Deal hot" : index % 3 === 1 ? "Bán chạy" : "Giảm sâu",
+              label: idx % 3 === 0 ? "Deal hot" : idx % 3 === 1 ? "Bán chạy" : "Giảm sâu",
               reviews: []
-            };
-          });
+            } as Product;
+          })
+          .filter((p): p is Product => p !== null);
 
-        setAllProducts(parsedProducts.length > 0 ? parsedProducts : PRODUCTS);
+        console.log("Final parsed products:", parsedProducts);
+        
+        if (parsedProducts.length > 0) {
+          setAllProducts(parsedProducts);
+        } else {
+          console.warn("No products parsed from sheet, showing mock data.");
+          setAllProducts(PRODUCTS);
+        }
         setIsLoading(false);
       },
-      error: (error) => {
-        console.error("Error parsing sheet:", error);
+      error: (err) => {
+        console.error("PapaParse error:", err);
         setAllProducts(PRODUCTS);
         setIsLoading(false);
       }
@@ -448,7 +486,8 @@ export default function App() {
             <a href="#features" className="hover:text-shopee transition-colors hidden sm:block">Quality</a>
             <a href="#footer" className="hover:text-shopee transition-colors">Contact</a>
           </div>
-          <button onClick={fetchProducts} className="text-slate-400 hover:text-shopee transition-all p-2 rounded-lg hover:bg-slate-50">
+          <button onClick={fetchProducts} className="text-slate-400 hover:text-shopee transition-all p-2 rounded-lg hover:bg-slate-50 flex items-center gap-2">
+            <span className="text-[9px] font-black uppercase opacity-50">{allProducts.length > 0 && allProducts[0].id.startsWith('sheet') ? 'Live' : 'Mock'} Data</span>
             <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
           </button>
         </div>
