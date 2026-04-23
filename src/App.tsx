@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { PRODUCTS, PLATFORMS, Product, Review, Platform } from './constants';
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRibaK4uT12Aj_VFwKVY2_PP4ASd6p7CYxF8r2SfVZJFMHR_-RzfFv1jbafw9-5PQTID7xlfvWyhvqS/pub?gid=0&single=true&output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRibaK4uT12Aj_VFwKVY2_PP4ASd6p7CYxF8r2SfVZJFMHR_-RzfFv1jbafw9-5PQTID7xlfvWyhvqS/pub?gid=809714474&single=true&output=csv";
 
 interface ProductCardProps {
   product: Product;
@@ -328,9 +328,20 @@ export default function App() {
   }, []);
 
   const categories = useMemo(() => {
-    const cats = new Set(allProducts.map(p => p.category));
+    let productsForCategories = allProducts;
+    if (activePlatform !== "All") {
+      productsForCategories = allProducts.filter(p => p.platform.toLowerCase() === activePlatform.toLowerCase());
+    }
+    const cats = new Set(productsForCategories.map(p => p.category));
     return ["All", ...Array.from(cats)].sort();
-  }, [allProducts]);
+  }, [allProducts, activePlatform]);
+
+  // Handle category reset if platform changes and category is no longer available
+  useEffect(() => {
+    if (activeCategory !== "All" && !categories.includes(activeCategory)) {
+      setActiveCategory("All");
+    }
+  }, [activePlatform, categories, activeCategory]);
 
   const filteredProducts = useMemo(() => {
     let filtered = allProducts;
