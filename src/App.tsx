@@ -872,7 +872,7 @@ export default function App() {
                   <div className="bg-slate-900 w-9 h-9 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
                     <Bird size={20} />
                     <img 
-                      src="/logo.png" 
+                      src="https://i.postimg.cc/dQZWfbCC/IMG-7798.png" 
                       alt="Logo" 
                       className="absolute inset-0 w-full h-full object-cover hidden"
                       onLoad={(e) => {
