@@ -23,19 +23,30 @@ import {
   Star,
   User,
   Send,
-  Loader2
+  Loader2,
+  ShoppingCart,
+  Plus,
+  Minus,
+  Trash2,
+  X,
+  Bird
 } from 'lucide-react';
 import { PRODUCTS, PLATFORMS, Product, Review, Platform } from './constants';
 
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRibaK4uT12Aj_VFwKVY2_PP4ASd6p7CYxF8r2SfVZJFMHR_-RzfFv1jbafw9-5PQTID7xlfvWyhvqS/pub?output=csv&gid=0";
 
+interface CartItem extends Product {
+  quantity: number;
+}
+
 interface ProductCardProps {
   product: Product;
   onAddReview: (productId: string, review: Omit<Review, 'id' | 'date'>) => void;
+  onAddToCart: (product: Product) => void;
   key?: string | number;
 }
 
-const ProductCard = ({ product, onAddReview }: ProductCardProps) => {
+const ProductCard = ({ product, onAddReview, onAddToCart }: ProductCardProps) => {
   const [showReviews, setShowReviews] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [newRating, setNewRating] = useState(5);
@@ -89,12 +100,7 @@ const ProductCard = ({ product, onAddReview }: ProductCardProps) => {
   };
 
   const getLabelTranslation = (label: string) => {
-    switch (label) {
-      case "Deal hot": return "HOT DEAL";
-      case "Bán chạy": return "BEST SELLER";
-      case "Giảm sâu": return "HUGE DROP";
-      default: return label.toUpperCase();
-    }
+    return label.toUpperCase();
   };
 
   const getPlatformColor = (platform: string) => {
@@ -125,8 +131,8 @@ const ProductCard = ({ product, onAddReview }: ProductCardProps) => {
         />
         <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
           <span className={`text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm uppercase tracking-widest ${
-            product.label === 'Deal hot' ? 'bg-red-500' : 
-            product.label === 'Bán chạy' ? 'bg-orange-500' : 'bg-indigo-500'
+            product.label === 'Hot Deal' ? 'bg-red-500' : 
+            product.label === 'Best Seller' ? 'bg-orange-500' : 'bg-indigo-500'
           }`}>
             {getLabelTranslation(product.label)}
           </span>
@@ -177,6 +183,15 @@ const ProductCard = ({ product, onAddReview }: ProductCardProps) => {
               Shop on {product.platform}
               <ExternalLink size={12} />
             </a>
+
+            <button 
+              onClick={() => onAddToCart(product)}
+              className="w-full bg-slate-100 text-slate-800 hover:bg-slate-200 font-black py-2.5 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest"
+              id={`btn-cart-${product.id}`}
+            >
+              Add to Cart
+              <Plus size={12} />
+            </button>
             
             <button 
               onClick={() => setShowReviews(!showReviews)}
@@ -265,10 +280,58 @@ const ProductCard = ({ product, onAddReview }: ProductCardProps) => {
 
 export default function App() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const [activePlatform, setActivePlatform] = useState<string>("All");
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Load cart from local storage
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        console.error("Failed to parse cart", e);
+      }
+    }
+  }, []);
+
+  // Save cart to local storage
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
+
+  const addToCart = (product: Product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
+    setIsCartOpen(true);
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  const updateCartQuantity = (id: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(1, item.quantity + delta);
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }));
+  };
+
+  const cartTotal = useMemo(() => {
+    return cart.reduce((total, item) => total + (item.discountedPrice * item.quantity), 0);
+  }, [cart]);
 
   const fetchProducts = () => {
     setIsLoading(true);
@@ -383,7 +446,7 @@ export default function App() {
               discountedPrice: parsePrice(hasDiscount ? discountedPriceStr : originalPriceStr),
               priceString: originalPriceStr,
               discountPriceString: hasDiscount ? discountedPriceStr : '',
-              label: idx % 3 === 0 ? "Deal hot" : idx % 3 === 1 ? "Bán chạy" : "Giảm sâu",
+              label: idx % 3 === 0 ? "Hot Deal" : idx % 3 === 1 ? "Best Seller" : "Price Drop",
               reviews: []
             } as Product;
           })
@@ -473,12 +536,27 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
       {/* Header Navigation */}
       <nav className="bg-white border-b border-slate-200 px-8 py-5 sticky top-0 z-50 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="bg-shopee w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-orange-200">C</div>
-          <span className="text-xl font-black tracking-tight text-shopee uppercase">clickcart finds.com</span>
+      <div className="flex items-center gap-3 shrink-0 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+        <div className="relative">
+          <div className="bg-white w-12 h-12 rounded-full flex items-center justify-center text-slate-900 border-2 border-slate-100 shadow-sm group-hover:border-shopee group-hover:text-shopee transition-all duration-300 overflow-hidden">
+            <Bird size={28} strokeWidth={1.5} className="group-hover:scale-110 transition-transform" />
+            <img 
+              src="/logo.png" 
+              alt="Clickcart Finds" 
+              className="absolute inset-0 w-full h-full object-cover hidden"
+              onLoad={(e) => {
+                e.currentTarget.classList.remove('hidden');
+                e.currentTarget.previousElementSibling?.classList.add('hidden');
+              }}
+            />
+          </div>
         </div>
+        <div className="flex flex-col">
+          <span className="text-xl font-black tracking-tighter text-slate-900 leading-none">CLICKCART FINDS</span>
+        </div>
+      </div>
         
-        <div className="flex items-center gap-10">
+        <div className="flex items-center gap-6 md:gap-10">
           <span className="hidden lg:inline-flex bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border border-emerald-200 shadow-sm items-center gap-2">
             <ShieldCheck size={12} />
             Official Product Links
@@ -486,20 +564,156 @@ export default function App() {
           <div className="flex gap-8 text-[11px] font-black uppercase tracking-widest text-slate-500">
             <a href="#deals" className="hover:text-shopee transition-colors">Deals</a>
             <a href="#features" className="hover:text-shopee transition-colors hidden sm:block">Quality</a>
-            <a 
-              href="#footer" 
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('footer')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+            <button 
+              onClick={() => document.getElementById('footer')?.scrollIntoView({ behavior: 'smooth' })}
               className="hover:text-shopee transition-colors"
-            >Contact</a>
+            >Contact</button>
           </div>
-          <button onClick={fetchProducts} className="text-slate-400 hover:text-shopee transition-all p-2 rounded-lg hover:bg-slate-50 flex items-center gap-2">
-            <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
-          </button>
+          
+          <div className="flex items-center gap-4">
+            <button onClick={fetchProducts} className="text-slate-400 hover:text-shopee transition-all p-2 rounded-lg hover:bg-slate-50 flex items-center gap-2">
+              <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
+            </button>
+            
+            <button 
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2.5 bg-slate-900 text-white rounded-xl shadow-lg hover:bg-black transition-all transform hover:scale-105"
+            >
+              <ShoppingCart size={18} />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-shopee text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                  {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </nav>
+
+      {/* Cart Drawer */}
+      <AnimatePresence>
+        {isCartOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCartOpen(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]"
+            />
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white z-[110] shadow-2xl flex flex-col"
+            >
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
+                    <ShoppingCart size={20} />
+                  </div>
+                  <div>
+                    <h2 className="font-black text-lg tracking-tight">Shopping Cart</h2>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">{cart.length} items collected</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsCartOpen(false)}
+                  className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-grow overflow-y-auto p-6 space-y-6">
+                {cart.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                      <ShoppingBag size={40} strokeWidth={1} />
+                    </div>
+                    <p className="font-bold uppercase text-[11px] tracking-widest">Your cart is empty</p>
+                    <button 
+                      onClick={() => setIsCartOpen(false)}
+                      className="mt-6 text-shopee font-black text-xs uppercase tracking-widest hover:underline"
+                    >
+                      Start Shopping
+                    </button>
+                  </div>
+                ) : (
+                  cart.map(item => (
+                    <div key={item.id} className="flex gap-4 group">
+                      <div className="w-20 h-20 bg-slate-100 rounded-xl overflow-hidden shrink-0 border border-slate-100">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-grow min-w-0 flex flex-col justify-between py-1">
+                        <div>
+                          <div className="flex justify-between items-start gap-2">
+                            <h3 className="font-bold text-sm text-slate-800 line-clamp-1 truncate">{item.name}</h3>
+                            <button 
+                              onClick={() => removeFromCart(item.id)}
+                              className="text-slate-300 hover:text-red-500 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                          <p className="text-[10px] font-bold text-shopee uppercase tracking-widest mt-0.5">{item.platform}</p>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50 scale-90 -ml-2">
+                            <button onClick={() => updateCartQuantity(item.id, -1)} className="p-1 px-2 hover:bg-slate-200 transition-colors text-slate-500">
+                              <Minus size={12} />
+                            </button>
+                            <span className="px-2 text-xs font-black text-slate-800 tabular-nums">{item.quantity}</span>
+                            <button onClick={() => updateCartQuantity(item.id, 1)} className="p-1 px-2 hover:bg-slate-200 transition-colors text-slate-500">
+                              <Plus size={12} />
+                            </button>
+                          </div>
+                          <span className="font-black text-sm text-slate-900">
+                            {new Intl.NumberFormat(item.priceString?.toLowerCase().includes('rm') ? 'en-MY' : 'vi-VN', { 
+                              style: 'currency', 
+                              currency: item.priceString?.toLowerCase().includes('rm') ? 'MYR' : 'VND',
+                              minimumFractionDigits: 0
+                            }).format(item.discountedPrice * item.quantity)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {cart.length > 0 && (
+                <div className="p-6 border-t border-slate-100 bg-slate-50/50">
+                  <div className="flex justify-between items-center mb-6">
+                    <span className="text-xs font-bold uppercase text-slate-500 tracking-widest">Total Value</span>
+                    <span className="text-2xl font-black text-slate-900">
+                      {new Intl.NumberFormat('vi-VN', { 
+                        style: 'currency', 
+                        currency: 'VND',
+                        minimumFractionDigits: 0
+                      }).format(cartTotal)}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      // In an affiliate site, this could show links for all items
+                      alert("Checkout logic: Redirecting to affiliate stores...");
+                    }}
+                    className="w-full bg-shopee text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-orange-100 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    Go to Checkout
+                    <Zap size={20} fill="currentColor" />
+                  </button>
+                  <p className="text-[10px] text-center text-slate-400 mt-4 font-bold uppercase tracking-widest">
+                    Checkout completes on the official platforms
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <div className="flex flex-col lg:flex-row grow min-h-0 max-w-7xl mx-auto w-full">
         {/* Sidebar: Hero & Info */}
@@ -539,6 +753,15 @@ export default function App() {
                   <p className="text-xs text-slate-500 font-medium leading-normal mt-1">Stay ahead with the best limited-time flash sales.</p>
                 </div>
               </div>
+              <div className="flex gap-5">
+                <div className="w-12 h-12 shrink-0 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm">
+                  <ShieldCheck size={24} />
+                </div>
+                <div>
+                  <h4 className="font-black text-sm uppercase tracking-tight text-slate-800">Official Product Links</h4>
+                  <p className="text-xs text-slate-500 font-medium leading-normal mt-1">Direct links to official stores for guaranteed authenticity.</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -554,23 +777,27 @@ export default function App() {
           {isLoading && (
             <div className="absolute inset-0 z-[60] bg-slate-50/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
               <Loader2 className="animate-spin text-shopee" size={48} />
-              <p className="text-xs font-black uppercase tracking-widest text-slate-500">Syncing with Sheet...</p>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-500">Syncing with Catalog...</p>
             </div>
           )}
 
           <div className="flex flex-col mb-10 gap-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 id="deals" className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-4">
-                {activePlatform === "All" ? "Hottest Deals" : `${activePlatform} Deals`}
-                <div className="w-10 h-1 bg-shopee rounded-full flex-shrink-0" />
-              </h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+              <div>
+                <h2 id="deals" className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+                  {activePlatform === "All" ? "Today's Top Picks" : `${activePlatform} Collection`}
+                </h2>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Discover {filteredProducts.length} best value items
+                </p>
+              </div>
               
               <div className="flex flex-wrap gap-2">
                 {["All", ...PLATFORMS].map((plt) => (
                   <button
                     key={plt}
                     onClick={() => setActivePlatform(plt)}
-                    className={`px-4 py-1.5 border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
+                    className={`px-5 py-2 border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
                       activePlatform.toLowerCase() === plt.toLowerCase()
                         ? (plt === "Shopee" ? "bg-shopee border-shopee text-white shadow-lg shadow-orange-100" : 
                            plt === "Shein" ? "bg-black border-black text-white shadow-lg shadow-slate-200" :
@@ -592,10 +819,10 @@ export default function App() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-1.5 border rounded-full text-[9px] font-black uppercase tracking-widest transition-all duration-200 ${
+                  className={`px-4 py-2 border rounded-full text-[9px] font-black uppercase tracking-widest transition-all duration-200 ${
                     activeCategory === cat 
                       ? "bg-slate-900 border-slate-900 text-white shadow-md" 
-                      : "bg-white border-slate-100 text-slate-400 hover:border-slate-200 shadow-sm"
+                      : "bg-white border-slate-200 text-slate-400 hover:border-slate-300 shadow-sm"
                   }`}
                 >
                   {cat}
@@ -614,49 +841,47 @@ export default function App() {
                   key={product.id} 
                   product={product} 
                   onAddReview={handleAddReview}
+                  onAddToCart={addToCart}
                 />
               ))}
             </AnimatePresence>
           </motion.div>
           
           {filteredProducts.length === 0 && !isLoading && (
-            <div className="py-20 text-center text-slate-400 font-black uppercase tracking-widest">
-              No products found for this selection.
+            <div className="py-32 flex flex-col items-center justify-center text-slate-400">
+               <ShoppingBag size={48} className="mb-4 opacity-20" />
+               <p className="font-black uppercase tracking-widest text-sm">No items matching your criteria.</p>
+               <button onClick={() => {setActivePlatform("All"); setActiveCategory("All");}} className="mt-4 text-shopee font-black text-xs uppercase tracking-widest hover:underline">Clear all filters</button>
             </div>
           )}
 
-          {/* Features Detail Section */}
-          <section id="features" className="mt-20 border-t border-slate-200 pt-16">
-            <h3 className="text-xl font-black text-slate-900 mb-8 uppercase tracking-tight">Quality Guarantee</h3>
-            <div className="grid sm:grid-cols-2 gap-8 font-medium">
-              <div className="p-8 bg-white border border-slate-200 rounded-3xl shadow-sm">
-                <ShieldCheck className="text-shopee mb-4" size={32} />
-                <h4 className="font-black text-slate-800 mb-2 uppercase text-sm">Official Sources Only</h4>
-                <p className="text-slate-500 text-sm leading-relaxed">We only curate links from official brand malls and authorized dealers to ensure 100% authenticity.</p>
-              </div>
-              <div className="p-8 bg-white border border-slate-200 rounded-3xl shadow-sm">
-                <TrendingUp className="text-blue-600 mb-4" size={32} />
-                <h4 className="font-black text-slate-800 mb-2 uppercase text-sm">Maximum Savings</h4>
-                <p className="text-slate-500 text-sm leading-relaxed">Our team manually verifies every discount to ensure you're getting the best possible price on the market.</p>
-              </div>
-            </div>
-          </section>
 
           {/* Footer Info */}
           <footer id="footer" className="mt-auto pt-20 pb-8 text-center sm:text-left scroll-mt-32">
             <div className="grid md:grid-cols-3 gap-12 mb-16 border-t border-slate-200 pt-16">
               <div className="col-span-1">
-                <div className="flex items-center gap-2.5 mb-6">
-                  <div className="bg-slate-900 w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm uppercase">C</div>
-                  <span className="text-lg font-black tracking-widest text-slate-900 uppercase">clickcart finds</span>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-slate-900 w-9 h-9 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden relative">
+                    <Bird size={20} />
+                    <img 
+                      src="/logo.png" 
+                      alt="Logo" 
+                      className="absolute inset-0 w-full h-full object-cover hidden"
+                      onLoad={(e) => {
+                        e.currentTarget.classList.remove('hidden');
+                        e.currentTarget.previousElementSibling?.classList.add('hidden');
+                      }}
+                    />
+                  </div>
+                  <span className="text-xl font-black tracking-tighter text-slate-900 uppercase">clickcart finds</span>
                 </div>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  Trang web tổng hợp sản phẩm chất lượng từ Shopee, Lazada, Amazon, TikTok và Shein. Chúng tôi cam kết chỉ chia sẻ những sản phẩm uy tín, giá tốt nhất.
+                  Global product curation across leading platforms. We help you find premium items with verified high ratings and the best historical prices.
                 </p>
               </div>
 
               <div id="contact-info" className="col-span-1">
-                <h4 className="font-black text-xs uppercase tracking-widest text-shopee mb-6">Thông Tin Liên Hệ</h4>
+                <h4 className="font-black text-xs uppercase tracking-widest text-shopee mb-6">Contact Info</h4>
                 <div className="flex flex-col gap-5 text-sm font-bold text-slate-700">
                   <a href="tel:01133566588" className="flex items-center gap-3 hover:text-shopee transition-colors group">
                     <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center group-hover:bg-shopee group-hover:text-white transition-all">
@@ -668,7 +893,7 @@ export default function App() {
                     <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all">
                       <MessageSquare size={14} />
                     </div>
-                    WhatsApp: 013-654 6858
+                    WhatsApp Support
                   </a>
                   <a href="mailto:qqphan88@gmail.com" className="flex items-center gap-3 hover:text-shopee transition-colors group">
                     <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all">
@@ -680,7 +905,7 @@ export default function App() {
               </div>
 
               <div className="col-span-1">
-                <h4 className="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Mạng Xã Hội</h4>
+                <h4 className="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Social Presence</h4>
                 <div className="flex gap-4 mb-8">
                   <a href="https://www.facebook.com/profile.php?id=100027900461622" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-shopee hover:text-white shadow-sm transition-all transform hover:-translate-y-1">
                     <Facebook size={24} />
@@ -690,14 +915,14 @@ export default function App() {
                   </a>
                 </div>
                 <div className="flex flex-wrap gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  <a href="#" className="hover:text-shopee transition-colors">Điều khoản</a>
-                  <a href="#" className="hover:text-shopee transition-colors">Bảo mật</a>
+                  <a href="#" className="hover:text-shopee transition-colors">Terms of Service</a>
+                  <a href="#" className="hover:text-shopee transition-colors">Privacy Policy</a>
                 </div>
               </div>
             </div>
 
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
-              © 2024 clickcart finds.com. Dedicated. Trustworthy. Best Deals.
+              © 2024 clickcart finds.com
             </p>
           </footer>
         </main>
