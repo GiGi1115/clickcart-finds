@@ -315,11 +315,27 @@ export default function App() {
             // Helper to get string version safely
             const s = (val: any) => val === undefined || val === null ? "" : String(val).trim();
             
-            const name = s(getValue(row, 'tên sản phẩm', 0) || getValue(row, 'name', 0));
-            if (!name || name === 'Product Name' || name === '0') return null;
+            // Extensive fallback for name identification
+            const name = s(
+              getValue(row, 'tên sản phẩm', 0) || 
+              getValue(row, 'name', 0) || 
+              getValue(row, 'sản phẩm', 0) ||
+              getValue(row, 'tiêu đề', 0) ||
+              row['Tên sản phẩm'] ||
+              row['Name']
+            );
+            
+            if (!name || name === 'Product Name' || name === '0' || name === 'Header') return null;
 
-            const originalPriceStr = s(getValue(row, 'giá gốc', 5) || '0');
-            const discountedPriceStr = s(getValue(row, 'giá ưu đãi', 6) || '');
+            const category = s(
+              getValue(row, 'hạng mục', 2) || 
+              getValue(row, 'category', 2) || 
+              getValue(row, 'loại', 2) ||
+              'General'
+            );
+
+            const originalPriceStr = s(getValue(row, 'giá gốc', 5) || getValue(row, 'price', 5) || '0');
+            const discountedPriceStr = s(getValue(row, 'giá ưu đãi', 6) || getValue(row, 'sale price', 6) || '');
             const hasDiscount = discountedPriceStr !== '' && discountedPriceStr !== originalPriceStr;
             
             const parsePrice = (str: string) => {
@@ -328,7 +344,12 @@ export default function App() {
               return parseFloat(cleaned) || 0;
             };
 
-            const rawPlatform = s(getValue(row, 'nền tảng', 1) || getValue(row, 'platform', 1) || 'Shopee');
+            const rawPlatform = s(
+              getValue(row, 'nền tảng', 1) || 
+              getValue(row, 'platform', 1) || 
+              'Shopee'
+            );
+            
             let platform: Platform = "Shopee";
             const lp = rawPlatform.toLowerCase();
             if (lp.includes('shopee')) platform = "Shopee";
@@ -337,9 +358,19 @@ export default function App() {
             else if (lp.includes('lazada')) platform = "Lazada";
             else if (lp.includes('amazon')) platform = "Amazon";
 
-            const category = s(getValue(row, 'hạng mục', 2) || getValue(row, 'category', 2) || 'General');
-            const link = s(getValue(row, 'link', 3) || getValue(row, 'Affiliate', 3) || '#');
-            const image = s(getValue(row, 'ảnh', 4) || getValue(row, 'image', 4) || 'https://via.placeholder.com/400');
+            const link = s(
+              getValue(row, 'link', 3) || 
+              getValue(row, 'Affiliate', 3) || 
+              getValue(row, 'đường dẫn', 3) ||
+              '#'
+            );
+            
+            const image = s(
+              getValue(row, 'ảnh', 4) || 
+              getValue(row, 'image', 4) || 
+              getValue(row, 'hình', 4) ||
+              'https://via.placeholder.com/400'
+            );
 
             return {
               id: `sheet-${idx}`,
@@ -439,36 +470,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
-      {/* Top Contact Bar */}
-      <div className="bg-slate-900 px-8 py-2.5 text-[10px] font-black uppercase tracking-widest border-b border-white/5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2 md:gap-4 text-slate-400">
-          <div className="flex items-center gap-6">
-            <a href="tel:01133566588" className="flex items-center gap-2 hover:text-shopee transition-colors">
-              <Phone size={10} className="text-shopee" />
-              01133566588
-            </a>
-            <a href="https://wa.me/0136546858" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-shopee transition-colors">
-              <MessageSquare size={10} className="text-shopee" />
-              WA: 013-654 6858
-            </a>
-          </div>
-          <div className="flex items-center gap-6">
-            <a href="mailto:qqphan88@gmail.com" className="flex items-center gap-2 hover:text-shopee transition-colors lowercase font-medium tracking-normal">
-              <Mail size={10} className="text-shopee" />
-              qqphan88@gmail.com
-            </a>
-            <div className="flex items-center gap-4">
-              <a href="https://www.facebook.com/profile.php?id=100027900461622" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                <Facebook size={12} />
-              </a>
-              <a href="https://www.instagram.com/qq.accessories_/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                <Instagram size={12} />
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Header Navigation */}
       <nav className="bg-white border-b border-slate-200 px-8 py-5 sticky top-0 z-50 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
         <div className="flex items-center gap-2.5 shrink-0">
@@ -484,7 +485,14 @@ export default function App() {
           <div className="flex gap-8 text-[11px] font-black uppercase tracking-widest text-slate-500">
             <a href="#deals" className="hover:text-shopee transition-colors">Deals</a>
             <a href="#features" className="hover:text-shopee transition-colors hidden sm:block">Quality</a>
-            <a href="#footer" className="hover:text-shopee transition-colors">Contact</a>
+            <a 
+              href="#footer" 
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('footer')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="hover:text-shopee transition-colors"
+            >Contact</a>
           </div>
           <button onClick={fetchProducts} className="text-slate-400 hover:text-shopee transition-all p-2 rounded-lg hover:bg-slate-50 flex items-center gap-2">
             <span className="text-[9px] font-black uppercase opacity-50">{allProducts.length > 0 && allProducts[0].id.startsWith('sheet') ? 'Live' : 'Mock'} Data</span>
@@ -635,19 +643,55 @@ export default function App() {
           </section>
 
           {/* Footer Info */}
-          <footer id="footer" className="mt-auto pt-20 pb-8 text-center sm:text-left">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-8">
-              <div className="flex items-center gap-2.5">
-                <div className="bg-slate-900 w-7 h-7 rounded-lg flex items-center justify-center text-white font-black text-sm uppercase">C</div>
-                <span className="text-sm font-black tracking-widest text-slate-900 uppercase">clickcart finds.com</span>
+          <footer id="footer" className="mt-auto pt-20 pb-8 text-center sm:text-left scroll-mt-24">
+            <div className="grid md:grid-cols-3 gap-12 mb-16 border-b border-slate-200 pb-16">
+              <div className="col-span-1">
+                <div className="flex items-center gap-2.5 mb-6">
+                  <div className="bg-slate-900 w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm uppercase">C</div>
+                  <span className="text-lg font-black tracking-widest text-slate-900 uppercase">clickcart finds</span>
+                </div>
+                <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                  Handpicked quality products from top e-commerce platforms. We help you find the best deals with certified quality.
+                </p>
               </div>
-              <div className="flex gap-10 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <a href="#" className="hover:text-shopee transition-colors">Terms</a>
-                <a href="#" className="hover:text-shopee transition-colors">Privacy</a>
-                <a href="#" className="hover:text-shopee transition-colors">Security</a>
+
+              <div className="col-span-1">
+                <h4 className="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Contact Us</h4>
+                <div className="flex flex-col gap-4 text-sm font-medium text-slate-600">
+                  <a href="tel:01133566588" className="flex items-center gap-3 hover:text-shopee transition-colors">
+                    <Phone size={16} className="text-shopee" />
+                    +60 11-3356 6588
+                  </a>
+                  <a href="https://wa.me/0136546858" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-shopee transition-colors">
+                    <MessageSquare size={16} className="text-shopee" />
+                    WhatsApp: 013-654 6858
+                  </a>
+                  <a href="mailto:qqphan88@gmail.com" className="flex items-center gap-3 hover:text-shopee transition-colors">
+                    <Mail size={16} className="text-shopee" />
+                    qqphan88@gmail.com
+                  </a>
+                </div>
+              </div>
+
+              <div className="col-span-1">
+                <h4 className="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Follow Us</h4>
+                <div className="flex gap-4 mb-6">
+                  <a href="https://www.facebook.com/profile.php?id=100027900461622" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-shopee hover:text-white transition-all transform hover:-translate-y-1">
+                    <Facebook size={20} />
+                  </a>
+                  <a href="https://www.instagram.com/qq.accessories_/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-shopee hover:text-white transition-all transform hover:-translate-y-1">
+                    <Instagram size={20} />
+                  </a>
+                </div>
+                <div className="flex flex-wrap gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <a href="#" className="hover:text-shopee transition-colors">Terms</a>
+                  <a href="#" className="hover:text-shopee transition-colors">Privacy</a>
+                  <a href="#" className="hover:text-shopee transition-colors">Security</a>
+                </div>
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest border-t border-slate-200 pt-6">
+
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
               © 2024 clickcart finds.com. Dedicated. Trustworthy. Best Deals.
             </p>
           </footer>
