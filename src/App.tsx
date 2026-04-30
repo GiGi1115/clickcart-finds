@@ -329,8 +329,20 @@ export default function App() {
     }));
   };
 
-  const cartTotal = useMemo(() => {
-    return cart.reduce((total, item) => total + (item.discountedPrice * item.quantity), 0);
+  const cartTotalInfo = useMemo(() => {
+    const total = cart.reduce((sum, item) => sum + (item.discountedPrice * item.quantity), 0);
+    const isMYR = cart.length > 0 && cart.some(item => item.priceString?.toLowerCase().includes('rm'));
+    
+    return {
+      total,
+      isMYR,
+      formattedTotal: new Intl.NumberFormat(isMYR ? 'en-MY' : 'vi-VN', {
+        style: 'currency',
+        currency: isMYR ? 'MYR' : 'VND',
+        minimumFractionDigits: isMYR ? 2 : 0,
+        maximumFractionDigits: isMYR ? 2 : 0
+      }).format(total)
+    };
   }, [cart]);
 
   const fetchProducts = () => {
@@ -688,11 +700,7 @@ export default function App() {
                   <div className="flex justify-between items-center mb-6">
                     <span className="text-xs font-bold uppercase text-slate-500 tracking-widest">Total Value</span>
                     <span className="text-2xl font-black text-slate-900">
-                      {new Intl.NumberFormat('vi-VN', { 
-                        style: 'currency', 
-                        currency: 'VND',
-                        minimumFractionDigits: 0
-                      }).format(cartTotal)}
+                      {cartTotalInfo.formattedTotal}
                     </span>
                   </div>
                   <button 
