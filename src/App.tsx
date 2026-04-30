@@ -550,10 +550,10 @@ export default function App() {
       <nav className="bg-white border-b border-slate-200 px-8 py-5 sticky top-0 z-50 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
       <div className="flex items-center gap-3 shrink-0 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
         <div className="relative">
-          <div className="bg-white w-12 h-12 rounded-full flex items-center justify-center text-slate-900 border-2 border-slate-100 shadow-sm group-hover:border-shopee group-hover:text-shopee transition-all duration-300 overflow-hidden">
+          <div className="bg-white w-12 h-12 rounded-full flex items-center justify-center text-slate-900 border-2 border-slate-100 shadow-sm group-hover:border-shopee group-hover:text-shopee transition-all duration-300 overflow-hidden relative">
             <Bird size={28} strokeWidth={1.5} className="group-hover:scale-110 transition-transform" />
             <img 
-              src="/logo.png" 
+              src="https://i.postimg.cc/dQZWfbCC/IMG-7798.png" 
               alt="Clickcart Finds" 
               className="absolute inset-0 w-full h-full object-cover hidden"
               onLoad={(e) => {
