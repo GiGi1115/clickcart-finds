@@ -452,12 +452,13 @@ export default function App() {
     }));
   };
 
-  // Handle scroll to show "Back to top" button
-  if (typeof window !== 'undefined') {
-    window.addEventListener('scroll', () => {
+  useEffect(() => {
+    const handleScroll = () => {
       setShowScrollTop(window.scrollY > 500);
-    });
-  }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -495,7 +496,6 @@ export default function App() {
             >Contact</a>
           </div>
           <button onClick={fetchProducts} className="text-slate-400 hover:text-shopee transition-all p-2 rounded-lg hover:bg-slate-50 flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase opacity-50">{allProducts.length > 0 && allProducts[0].id.startsWith('sheet') ? 'Live' : 'Mock'} Data</span>
             <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
           </button>
         </div>
@@ -643,50 +643,55 @@ export default function App() {
           </section>
 
           {/* Footer Info */}
-          <footer id="footer" className="mt-auto pt-20 pb-8 text-center sm:text-left scroll-mt-24">
-            <div className="grid md:grid-cols-3 gap-12 mb-16 border-b border-slate-200 pb-16">
+          <footer id="footer" className="mt-auto pt-20 pb-8 text-center sm:text-left scroll-mt-32">
+            <div className="grid md:grid-cols-3 gap-12 mb-16 border-t border-slate-200 pt-16">
               <div className="col-span-1">
                 <div className="flex items-center gap-2.5 mb-6">
                   <div className="bg-slate-900 w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm uppercase">C</div>
                   <span className="text-lg font-black tracking-widest text-slate-900 uppercase">clickcart finds</span>
                 </div>
                 <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                  Handpicked quality products from top e-commerce platforms. We help you find the best deals with certified quality.
+                  Trang web tổng hợp sản phẩm chất lượng từ Shopee, Lazada, Amazon, TikTok và Shein. Chúng tôi cam kết chỉ chia sẻ những sản phẩm uy tín, giá tốt nhất.
                 </p>
               </div>
 
-              <div className="col-span-1">
-                <h4 className="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Contact Us</h4>
-                <div className="flex flex-col gap-4 text-sm font-medium text-slate-600">
-                  <a href="tel:01133566588" className="flex items-center gap-3 hover:text-shopee transition-colors">
-                    <Phone size={16} className="text-shopee" />
+              <div id="contact-info" className="col-span-1">
+                <h4 className="font-black text-xs uppercase tracking-widest text-shopee mb-6">Thông Tin Liên Hệ</h4>
+                <div className="flex flex-col gap-5 text-sm font-bold text-slate-700">
+                  <a href="tel:01133566588" className="flex items-center gap-3 hover:text-shopee transition-colors group">
+                    <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center group-hover:bg-shopee group-hover:text-white transition-all">
+                      <Phone size={14} />
+                    </div>
                     +60 11-3356 6588
                   </a>
-                  <a href="https://wa.me/0136546858" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-shopee transition-colors">
-                    <MessageSquare size={16} className="text-shopee" />
+                  <a href="https://wa.me/0136546858" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-shopee transition-colors group">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                      <MessageSquare size={14} />
+                    </div>
                     WhatsApp: 013-654 6858
                   </a>
-                  <a href="mailto:qqphan88@gmail.com" className="flex items-center gap-3 hover:text-shopee transition-colors">
-                    <Mail size={16} className="text-shopee" />
+                  <a href="mailto:qqphan88@gmail.com" className="flex items-center gap-3 hover:text-shopee transition-colors group">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all">
+                      <Mail size={14} />
+                    </div>
                     qqphan88@gmail.com
                   </a>
                 </div>
               </div>
 
               <div className="col-span-1">
-                <h4 className="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Follow Us</h4>
-                <div className="flex gap-4 mb-6">
-                  <a href="https://www.facebook.com/profile.php?id=100027900461622" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-shopee hover:text-white transition-all transform hover:-translate-y-1">
-                    <Facebook size={20} />
+                <h4 className="font-black text-xs uppercase tracking-widest text-slate-900 mb-6">Mạng Xã Hội</h4>
+                <div className="flex gap-4 mb-8">
+                  <a href="https://www.facebook.com/profile.php?id=100027900461622" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-shopee hover:text-white shadow-sm transition-all transform hover:-translate-y-1">
+                    <Facebook size={24} />
                   </a>
-                  <a href="https://www.instagram.com/qq.accessories_/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-shopee hover:text-white transition-all transform hover:-translate-y-1">
-                    <Instagram size={20} />
+                  <a href="https://www.instagram.com/qq.accessories_/" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-shopee hover:text-white shadow-sm transition-all transform hover:-translate-y-1">
+                    <Instagram size={24} />
                   </a>
                 </div>
                 <div className="flex flex-wrap gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  <a href="#" className="hover:text-shopee transition-colors">Terms</a>
-                  <a href="#" className="hover:text-shopee transition-colors">Privacy</a>
-                  <a href="#" className="hover:text-shopee transition-colors">Security</a>
+                  <a href="#" className="hover:text-shopee transition-colors">Điều khoản</a>
+                  <a href="#" className="hover:text-shopee transition-colors">Bảo mật</a>
                 </div>
               </div>
             </div>
