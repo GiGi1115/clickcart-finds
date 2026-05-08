@@ -509,9 +509,27 @@ export default function App() {
     }
     if (activePlatform !== "All") {
       filtered = filtered.filter(p => p.platform.toLowerCase() === activePlatform.toLowerCase());
+    } else {
+      // Sort by platform order defined in PLATFORMS when displaying "All"
+      filtered = [...filtered].sort((a, b) => {
+        const orderA = PLATFORMS.indexOf(a.platform);
+        const orderB = PLATFORMS.indexOf(b.platform);
+        return orderA - orderB;
+      });
     }
     return filtered;
   }, [activeCategory, activePlatform, allProducts]);
+
+  const groupedProducts = useMemo(() => {
+    const groups: Record<string, Product[]> = {};
+    filteredProducts.forEach(product => {
+      if (!groups[product.platform]) {
+        groups[product.platform] = [];
+      }
+      groups[product.platform].push(product);
+    });
+    return groups;
+  }, [filteredProducts]);
 
   const handleAddReview = (productId: string, newReviewData: Omit<Review, 'id' | 'date'>) => {
     setAllProducts(prev => prev.map(p => {
@@ -841,17 +859,50 @@ export default function App() {
 
           <motion.div 
             layout
-            className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8"
+            className="flex flex-col gap-12"
           >
             <AnimatePresence mode="popLayout">
-              {filteredProducts.map((product) => (
-                <ProductCard 
-                  key={product.id} 
-                  product={product} 
-                  onAddReview={handleAddReview}
-                  onAddToCart={addToCart}
-                />
-              ))}
+              {activePlatform === "All" ? (
+                PLATFORMS.filter(p => groupedProducts[p]?.length > 0).map((platform) => (
+                  <div key={platform} className="flex flex-col gap-8">
+                    <div className="flex items-center gap-4 group">
+                      <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-sm transform transition-transform group-hover:scale-105 ${
+                        platform === "Shopee" ? "bg-shopee text-white" :
+                        platform === "Shein" ? "bg-black text-white" :
+                        platform === "TikTok" ? "bg-cyan-500 text-black" :
+                        platform === "Lazada" ? "bg-[#000083] text-white" :
+                        platform === "Amazon" ? "bg-[#FF9900] text-black" :
+                        "bg-slate-900 text-white"
+                      }`}>
+                        {platform}
+                      </div>
+                      <div className="h-px bg-gradient-to-r from-slate-200 via-slate-100 to-transparent flex-grow rounded-full"></div>
+                      <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">{groupedProducts[platform].length} ITEMS</span>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+                      {groupedProducts[platform].map((product) => (
+                        <ProductCard 
+                          key={product.id} 
+                          product={product} 
+                          onAddReview={handleAddReview}
+                          onAddToCart={addToCart}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 w-full">
+                  {filteredProducts.map((product) => (
+                    <ProductCard 
+                      key={product.id} 
+                      product={product} 
+                      onAddReview={handleAddReview}
+                      onAddToCart={addToCart}
+                    />
+                  ))}
+                </div>
+              )}
             </AnimatePresence>
           </motion.div>
           
