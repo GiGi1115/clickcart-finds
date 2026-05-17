@@ -942,11 +942,11 @@ export default function App() {
               <div id="contact-info" className="col-span-1">
                 <h4 className="font-black text-xs uppercase tracking-widest text-shopee mb-6">Contact Info</h4>
                 <div className="flex flex-col gap-5 text-sm font-bold text-slate-700">
-                  <a href="tel:01133566588" className="flex items-center gap-3 hover:text-shopee transition-colors group">
+                  <a href="tel:+60136546858" className="flex items-center gap-3 hover:text-shopee transition-colors group">
                     <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center group-hover:bg-shopee group-hover:text-white transition-all">
                       <Phone size={14} />
                     </div>
-                    +60 11-3356 6588
+                    +60136546858
                   </a>
                   <a href="https://wa.me/0136546858" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-shopee transition-colors group">
                     <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all">
